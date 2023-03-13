@@ -1,7 +1,3 @@
-Time-stamp: <2002-03-23 16:29:18 piet>
-
-READ ME
-
 The Code `nbody_sh1.C' is a simple stand-alone version of an N-body
 system with shared but variable time steps, based on the fourth-order
 Hermite integration scheme.  A code similar to this one will appear in
