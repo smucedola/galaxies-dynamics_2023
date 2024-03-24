@@ -1,0 +1,9 @@
+text.usetex: True
+font.family: Helvetica
+grid.linewidth: 0.8
+grid.linestyle: dotted
+grid.alpha: 1
+axes3d.grid: True
+axes3d.xaxis.panecolor: w
+axes3d.yaxis.panecolor: w
+axes3d.zaxis.panecolor: w
