@@ -1,0 +1,13 @@
+text.usetex: True
+font.family: Computer Modern Roman
+font.size: 10.5
+grid.linewidth: 0.8
+grid.linestyle: dotted
+grid.alpha: 1
+axes3d.grid: True
+axes3d.xaxis.panecolor: (0, 0, 0, 0.01)
+axes3d.yaxis.panecolor: (0, 0, 0, 0.03)
+axes3d.zaxis.panecolor: (0, 0, 0, 0.04)
+animation.embed_limit: 2e20
+image.cmap: magma
+lines.linewidth: 0.5
