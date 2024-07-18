@@ -11,3 +11,4 @@ axes3d.zaxis.panecolor: (0, 0, 0, 0.04)
 animation.embed_limit: 2e20
 image.cmap: magma
 lines.linewidth: 0.5
+scatter.edgecolors: None

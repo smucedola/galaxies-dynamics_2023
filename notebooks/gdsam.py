@@ -5,6 +5,7 @@ from tqdm.notebook import tqdm
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from scipy.stats import gaussian_kde
 
 
 
@@ -113,7 +114,7 @@ class initial_data:
         
         # Generate positions following Plummer model distribution
         self.r = I_r(u_r)
-        self.theta = I_theta(u_theta)
+        self.theta = I_theta(u_theta)-np.pi
         self.z = np.zeros(self.N) #this is now z in rality, cyl coords
 
         self.x = self.r * np.cos(self.theta)
@@ -203,6 +204,14 @@ class initial_data:
         self.z = inv_z_func(u_z)
 
 
+    def set_positions(self,N, M_tot, x, y, z):
+        self.N = N
+        self.m = np.full(N, M_tot / N)
+        self.x = x
+        self.y = y
+        self.z = z
+
+
 
     # Include similar methods for other distribution models
 
@@ -268,7 +277,7 @@ class initial_data:
         
         return fig, axs
 
-    def positions_2d(self, ax, axes='xy', l=10, a=1, s=1):
+    def positions_2d(self, ax, axes='xy', l=10, a=1, s=1, bw=1, add_kde=False):
         """
         Plot 2D positions of particles.
         
@@ -287,7 +296,7 @@ class initial_data:
             return
 
         # Set plot title
-        ax.set_title(f'{self.N} particles, mass = {round(self.m[0]*self.N, 2)}')
+        ax.set_title(f'{self.N} particles, mass = {round(np.sum(self.m), 2)}')
 
         # Map axis characters to corresponding data arrays
         axis_map = {'x': self.x, 'y': self.y, 'z': self.z}
@@ -296,7 +305,15 @@ class initial_data:
         x_data = axis_map[axes[0]]
         y_data = axis_map[axes[1]]
         
-        ax.scatter(x_data, y_data, c='royalblue', s=s, alpha=a)
+        if add_kde==True:
+            xy = np.vstack([x_data, y_data])
+            kde = gaussian_kde(xy, bw_method=bw)
+            density = kde(xy)
+        else:
+            density='royalblue'
+        
+        
+        ax.scatter(x_data, y_data, c=density, edgecolor='None', s=s, alpha=a)
 
         # Set x and y labels
         ax.set_xlabel(fr'${axes[0]}$')
@@ -311,7 +328,7 @@ class initial_data:
         return ax
     
 
-    def velocities_2d(self, ax, axes='xy', l=10, a=1, s=1):
+    def velocities_2d(self, ax, axes='xy', l=10, a=1, s=1, bw=1, add_kde=False):
         """
         Plot 2D positions of particles.
         
@@ -335,11 +352,20 @@ class initial_data:
         # Map axis characters to corresponding data arrays
         axis_map = {'x': self.vx, 'y': self.vy, 'z': self.vz}
 
+
         # Extract data for scatter plot
         x_data = axis_map[axes[0]]
         y_data = axis_map[axes[1]]
+
+        if add_kde==True:
+            xy = np.vstack([x_data, y_data])
+            kde = gaussian_kde(xy, bw_method=bw)
+            density = kde(xy)
+        else:
+            density='royalblue'
         
-        ax.scatter(x_data, y_data, c='royalblue', s=s, alpha=a)
+        
+        ax.scatter(x_data, y_data, c=density, edgecolor='None', s=s, alpha=a)
 
         # Set x and y labels
         ax.set_xlabel(fr'${axes[0]}$')
@@ -354,19 +380,19 @@ class initial_data:
         return ax
 
 
-    def projections(self, l=10, a=1, s=1):
-        fig, axs = plt.subplots(1,3, figsize = (11,11), tight_layout = True)
-        self.positions_2d(axs[0], 'xy', l, a, s)
-        self.positions_2d(axs[1], 'xz', l, a, s)
-        self.positions_2d(axs[2], 'yz', l, a, s)
+    def projections(self, l=10, a=1, s=1, bw=1, add_kde=False):
+        fig, axs = plt.subplots(1,3, figsize = (11,3), tight_layout = True)
+        self.positions_2d(axs[0], 'xy', l, a, s, bw, add_kde=add_kde)
+        self.positions_2d(axs[1], 'xz', l, a, s, bw, add_kde=add_kde)
+        self.positions_2d(axs[2], 'yz', l, a, s, bw, add_kde=add_kde)
 
         return fig, axs
 
-    def v_projections(self, l=10, a=1, s=1):
+    def v_projections(self, l=10, a=1, s=1, add_kde=False):
         fig, axs = plt.subplots(1,3, figsize = (11,11), tight_layout = True)
-        self.velocities_2d(axs[0], 'xy', l, a, s)
-        self.velocities_2d(axs[1], 'xz', l, a, s)
-        self.velocities_2d(axs[2], 'yz', l, a, s)
+        self.velocities_2d(axs[0], 'xy', l, a, s, add_kde=add_kde)
+        self.velocities_2d(axs[1], 'xz', l, a, s, add_kde=add_kde)
+        self.velocities_2d(axs[2], 'yz', l, a, s, add_kde=add_kde)
 
         return fig, axs
 
@@ -614,7 +640,7 @@ class plotter:
     # ----------------- PLOTTING ROUTINES --------------------------- #
 
 
-    def positions_2d(self, ax, num, axes='xy', l=10, b=0, a=1, s=10, lw=.5):
+    def positions_2d(self, ax, num, axes='xy', l=10, b=0, a=1, s=10, lw=.5, bw=1, add_kde=False):
         """
         Plot 2D positions and trajectories of particles.
         
@@ -634,25 +660,34 @@ class plotter:
             return
 
         # Set plot title
-        ax.set_title(f'{self.N:.0e} particles, mass = {self.m[0]*self.N:n}, time = {self.t[num]:.1f}')
+        ax.set_title(f'{self.N} particles, mass = {round(np.sum(self.m), 2)}')
 
         # Map axis characters to corresponding data arrays
         axis_map = {'x': self.x, 'y': self.y, 'z': self.z}
 
         # Extract data for scatter plot
-        x_data = axis_map[axes[0]][:, num]
-        y_data = axis_map[axes[1]][:, num]
-
+        x_data = axis_map[axes[0]][:,num]
+        y_data = axis_map[axes[1]][:,num]
+        
+        if add_kde==True:
+            xy = np.vstack([x_data, y_data])
+            kde = gaussian_kde(xy, bw_method=bw)
+            density = kde(xy)
+        else:
+            density='royalblue'
+            
+        
         # Set x and y labels
         ax.set_xlabel(fr'${axes[0]}$')
         ax.set_ylabel(fr'${axes[1]}$')
 
         # Plot scatter plot and trajectories
-        ax.scatter(x_data, y_data, color='royalblue', s=s, alpha=a)
-        for i in range(self.N):
-            b_ = round(b*num) 
-            ax.plot(axis_map[axes[0]][i, num-b_:num], axis_map[axes[1]][i, num-b_:num], 
-                    color='indianred', alpha=a, lw=lw)
+        ax.scatter(x_data, y_data, c=density, edgecolor='None', s=s, alpha=a)
+        if b!=0:
+            for i in range(self.N):
+                b_ = round(b*num) 
+                ax.plot(axis_map[axes[0]][i, num-b_:num], axis_map[axes[1]][i, num-b_:num], 
+                        color='indianred', alpha=a, lw=lw)
 
         # Set limits, aspect ratio, and grid
         ax.set_xlim(-l, l)
@@ -663,7 +698,7 @@ class plotter:
         return ax
     
     
-    def projections(self, num, l=10, b=0, a=1, s=1, lw=.5, axs=None):
+    def projections(self, num, l=10, b=0, a=1, s=1, lw=.5, bw=1, add_kde=False, axs=None):
         """
         Plot 2D projections of particles.
 
@@ -685,12 +720,11 @@ class plotter:
         else:
             fig = None
 
-        self.positions_2d(axs[0], num, 'xy', l, b, a, s, lw)
-        self.positions_2d(axs[1], num, 'xz', l, b, a, s, lw)
-        self.positions_2d(axs[2], num, 'yz', l, b, a, s, lw)
+        self.positions_2d(axs[0], num, 'xy', l, b, a, s, lw, bw, add_kde=add_kde)
+        self.positions_2d(axs[1], num, 'xz', l, b, a, s, lw, bw, add_kde=add_kde)
+        self.positions_2d(axs[2], num, 'yz', l, b, a, s, lw, bw, add_kde=add_kde)
 
         return axs
-
 
 
     def positions_heatmap(self, num, axes='xy', x_min=-20, y_min=-20, l=10, bins=100, cmap='magma', ax=None):
@@ -807,10 +841,11 @@ class plotter:
         ax.scatter(self.x[:, num], self.y[:, num], self.z[:, num], color='royalblue', s=s, alpha=a)
 
         # Plot trajectories
-        for i in range(self.N):
-            b_ = round(b*num)
-            ax.plot(self.x[i, num-b_:num], self.y[i, num-b_:num], self.z[i, num-b_:num],
-                     color='indianred', alpha=a, lw=lw)
+        if b!=0:
+            for i in range(self.N):
+                b_ = round(b*num)
+                ax.plot(self.x[i, num-b_:num], self.y[i, num-b_:num], self.z[i, num-b_:num],
+                        color='indianred', alpha=a, lw=lw)
 
         # Set limits and grid
         ax.set_xlim(-l, l)
@@ -977,14 +1012,44 @@ class plotter:
         def update(num):
             ax.clear()
             self.positions_2d(ax, num=num, axes=axes, l=l, b=b, a=a, s=s, lw=lw)
-            # Scatter plot
-            scatter = ax.scatter(self.x[:, num], self.y[:, num], c='royalblue', s=s, alpha=a)
-            return scatter,
-
+        
         # Create animation
         num_frames = round(f_t*len(self.t))
-        ani_2d = animation.FuncAnimation(fig, func=update, frames=tqdm(range(num_frames)[::frame_skip]), interval=interval, blit=True)
+        ani_2d = animation.FuncAnimation(fig, func=update, frames=tqdm(range(num_frames)[::frame_skip]), interval=interval)
         return ani_2d
+    
+    
+    def animate_projections(self, fig, axs, f_t=1, l=10, b=0, a=1, s=10, lw=.5, frame_skip=1, interval=1):
+        """
+        Animate projections of particles over time.
+
+        Args:
+        - fig (matplotlib.figure.Figure): Figure object for the entire plot.
+        - axs (list of matplotlib.axes._subplots.AxesSubplot): List of Axes objects for plotting projections.
+        - f_t (float): Fraction of total time.
+        - l (float): Limit of the domain.
+        - b (int): Length of trajectories.
+        - a (float): Alpha value for scatter plot.
+        - s (float): Size of markers.
+        - lw (float): Width of trajectory lines.
+        - frame_skip (int): Number of frames to skip.
+        - interval (int): Interval between frames in milliseconds.
+
+        Returns:
+        - animation.FuncAnimation: Animation object.
+        """
+        # Define animation function
+        def update(num):
+            for ax, axes in zip(axs, ['xy', 'xz', 'yz']):
+                ax.clear()
+                self.positions_2d(ax, num=num, axes=axes, l=l, b=b, a=a, s=s, lw=lw)
+
+        # Create animation
+        num_frames = round(f_t * len(self.t))
+        ani_projections = animation.FuncAnimation(fig, func=update, frames=tqdm(range(num_frames)[::frame_skip]),
+                                                  interval=interval)
+        return ani_projections
+
 
 
     def animate_3d(self, fig, ax, f_t=1, l=10, b=0, a=1, s=10, lw=.5, frame_skip=1, interval=1):
@@ -1004,9 +1069,8 @@ class plotter:
         def update(num):
             ax.clear()
             self.positions_3d(ax, num=num, l=l, b=b, a=a, s=s, lw=lw)
-            # Scatter plot
             scatter = ax.scatter(self.x[:, num], self.y[:, num], self.z[:, num], c='royalblue', s=s, alpha=a)
-            return scatter,
+            return scatter
 
         # Create animation
         num_frames = round(f_t*len(self.t))
